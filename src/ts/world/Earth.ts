@@ -27,14 +27,14 @@ type options = {
       name: string,
       E: number, // 经度
       N: number, // 维度
-      address: string // 新增地址字段
+      companies: {
+        name: string,
+        address: string,
+        lat: number,
+        lon: number
+      }[]
     },
-    endArray: {
-      name: string,
-      E: number, // 经度
-      N: number, // 维度
-      address: string // 新增地址字段
-    }[]
+    endArray: any[]
   }[]
   dom: HTMLElement,
   textures: Record<string, Texture>, // 贴图
@@ -332,54 +332,43 @@ export default class earth {
   async createMarkupPoint() {
     await Promise.all(this.options.data.map(async (item) => {
       const radius = this.options.earth.radius;
-      // 计算中心点（以startArray为中心）
-      const centerLon = item.startArray.E;
-      const centerLat = item.startArray.N;
-      // 扇形参数
-      const visualOffset = 0.15; // 视觉半径偏移（单位：经纬度，调大点更分散）
-      const angleStep = Math.PI / 6; // 30度间隔
-      // 组合所有点，方便统一处理
-      const allPoints = [
-        { ...item.startArray, _visualIndex: 0 },
-        ...item.endArray.map((e, i) => ({ ...e, _visualIndex: i + 1 }))
-      ];
-      allPoints.forEach((point, idx) => {
-        // 计算视觉偏移角度
-        const angle = -angleStep + idx * angleStep; // -30°, 0°, +30°
-        // 视觉经纬度（仅用于渲染）
-        const visualLon = centerLon + visualOffset * Math.cos(angle);
-        const visualLat = centerLat + visualOffset * Math.sin(angle);
-        this.punctuationMaterial = new MeshBasicMaterial({
-          color: this.options.punctuation.circleColor,
-          map: this.options.textures.label,
-          transparent: true,
-          depthWrite: false,
-        });
-        const mesh = createPointMesh({ radius, lon: visualLon, lat: visualLat, material: this.punctuationMaterial });
-        // userData中保留真实经纬度和地址
-        mesh.userData.coordinates = {
-          lon: point.E,
-          lat: point.N,
-          name: point.name,
-          address: point.address
-        };
-        mesh.scale.set(2, 2, 2);
-        this.markupPoint.add(mesh);
-        this.clickablePoints.push(mesh);
-        // 光柱和波动光圈也用视觉偏移
-        const lightPillar = createLightPillar({
-          radius,
-          lon: visualLon,
-          lat: visualLat,
-          index: idx,
-          textures: this.options.textures,
-          punctuation: this.options.punctuation,
-        });
-        this.markupPoint.add(lightPillar);
-        const waveMesh = createWaveMesh({ radius, lon: visualLon, lat: visualLat, textures: this.options.textures });
-        this.markupPoint.add(waveMesh);
-        this.waveMeshArr.push(waveMesh);
+      const lon = item.startArray.E;
+      const lat = item.startArray.N;
+      this.punctuationMaterial = new MeshBasicMaterial({
+        color: this.options.punctuation.circleColor,
+        map: this.options.textures.label,
+        transparent: true,
+        depthWrite: false,
       });
+      // 只渲染一个点
+      const mesh = createPointMesh({ radius, lon, lat, material: this.punctuationMaterial });
+      mesh.userData.coordinates = {
+        name: item.startArray.name,
+        companies: item.startArray.companies
+      };
+      mesh.scale.set(2, 2, 2);
+      this.markupPoint.add(mesh);
+      this.clickablePoints.push(mesh);
+      // 光柱和波动光圈
+      const lightPillar = createLightPillar({
+        radius,
+        lon,
+        lat,
+        index: 0,
+        textures: this.options.textures,
+        punctuation: this.options.punctuation,
+      });
+      this.markupPoint.add(lightPillar);
+      const waveMesh = createWaveMesh({ radius, lon, lat, textures: this.options.textures });
+      this.markupPoint.add(waveMesh);
+      this.waveMeshArr.push(waveMesh);
+      // 添加定位marker
+      const markerTexture = new TextureLoader().load('./mark.png');
+      const markerMaterial = new SpriteMaterial({ map: markerTexture, transparent: true });
+      const markerSprite = new Sprite(markerMaterial);
+      markerSprite.scale.set(3, 2, 1);
+      markerSprite.position.copy(mesh.position.clone().multiplyScalar(1.05));
+      this.markupPoint.add(markerSprite);
       this.earthGroup.add(this.markupPoint);
     }))
   }
