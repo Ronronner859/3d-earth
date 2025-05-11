@@ -59,6 +59,19 @@ export default class World {
     // 添加点击事件监听
     this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
 
+    // 添加弹窗DOM
+    const infoPopup = document.createElement('div');
+    infoPopup.id = 'info-popup';
+    infoPopup.style.cssText = `
+      position: absolute; z-index: 9999; background: rgba(0,0,0,0.85); color: #fff; padding: 16px 24px; border-radius: 8px; display: none; max-width: 320px; font-size: 16px; line-height: 1.6; pointer-events: auto; box-shadow: 0 4px 24px rgba(0,0,0,0.3);`;
+    document.body.appendChild(infoPopup);
+    // 点击空白关闭弹窗
+    window.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).id !== 'info-popup') {
+        infoPopup.style.display = 'none';
+      }
+    });
+
     this.resources = new Resources(async () => {
       await this.createEarth()
       // 开始渲染
@@ -79,21 +92,18 @@ export default class World {
     const clickablePoints = this.earth?.clickablePoints || [];
     const intersects = this.raycaster.intersectObjects(clickablePoints, true);
 
-    console.log('Intersects:', intersects); // 调试日志
-
     if (intersects.length > 0) {
       const clickedObject = intersects[0].object;
-      console.log('Clicked object:', clickedObject); // 调试日志
-      console.log('UserData:', clickedObject.userData); // 调试日志
-      
-      // 检查是否点击到了点标记
       if (clickedObject.userData && clickedObject.userData.coordinates) {
-        const { lon, lat, name } = clickedObject.userData.coordinates;
-        console.log('Coordinates:', { lon, lat, name }); // 调试日志
-        // 跳转到高德地图
-        // const url = `https://uri.amap.com/marker?position=${lon},${lat}&name=${name}`;
-        const url = 'https://www.baidu.com'
-        window.open(url, '_blank');
+        const { name, address } = clickedObject.userData.coordinates;
+        // 弹窗显示
+        const infoPopup = document.getElementById('info-popup');
+        infoPopup.innerHTML = `<b>${name}</b><br>${address}`;
+        infoPopup.style.left = event.clientX + 10 + 'px';
+        infoPopup.style.top = event.clientY + 10 + 'px';
+        infoPopup.style.display = 'block';
+        // 阻止冒泡，避免被 window 的 click 关闭
+        event.stopPropagation();
       }
     }
   }
