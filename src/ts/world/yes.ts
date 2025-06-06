@@ -167,12 +167,12 @@ export default class World {
     `;
     document.head.appendChild(style);
 
-    // this.gui.add(this.popupParams, 'showPopup').name('控制面板').onChange((value) => {
-    //   const infoPopup = document.getElementById('info-popup');
-    //   if (infoPopup) {
-    //     infoPopup.style.display = value ? 'block' : 'none';
-    //   }
-    // });
+    this.gui.add(this.popupParams, 'showPopup').name('控制面板').onChange((value) => {
+      const infoPopup = document.getElementById('info-popup');
+      if (infoPopup) {
+        infoPopup.style.display = value ? 'block' : 'none';
+      }
+    });
 
     // 添加弹窗DOM
     const infoPopup = document.createElement('div');
@@ -291,10 +291,10 @@ export default class World {
     let allContent = '';
     clickablePoints.forEach((point: any) => {
       if (point.userData && point.userData.coordinates) {
-        const {  companies } = point.userData.coordinates;
+        const { name, companies } = point.userData.coordinates;
         
         // 添加内容
-        // allContent += `<b style='font-size:18px;color:#3fa7ff;margin-bottom:12px;display:block;font-family:"Source Han Sans","Noto Sans SC",sans-serif;'>${name}</b>`;
+        allContent += `<b style='font-size:18px;color:#3fa7ff;margin-bottom:12px;display:block;font-family:"Source Han Sans","Noto Sans SC",sans-serif;'>${name}</b>`;
         companies.forEach((c: any) => {
           // 验证经纬度是否合法
           if (!c.lon || !c.lat || 
@@ -308,41 +308,23 @@ export default class World {
           const lon = Number(c.lon).toFixed(5);
           const lat = Number(c.lat).toFixed(5);
           
-          // 生成各地图服务的链接
+          // 使用高德地图搜索链接格式
           let amapUrl = '';
           if (c.ifMap) {
             amapUrl = `https://ditu.amap.com/search?query=${encodeURIComponent(c.name || '')}&city=${c.city}&geoobj=${lon}%7C${lat}%7C${lon}%7C${lat}&zoom=17`;
           } else {
             amapUrl = c.amapUrl;
           }
-          // const amapUrl = `https://ditu.amap.com/search?query=${encodeURIComponent(c.name || '')}&city=${c.city}&geoobj=${lon}%7C${lat}%7C${lon}%7C${lat}&zoom=17`;
-          // 百度地图坐标需要转换，这里使用原始坐标（实际使用时需要进行坐标转换）
-          let baiduUrl = '';
-          if (c.ifMap) {
-            baiduUrl = `https://map.baidu.com/place/B0H3HSZE6T`;
-          } else {
-            baiduUrl = c.baiduUrl;
-          }
-          // const baiduUrl = `https://api.map.baidu.com/marker?location=${lat},${lon}&title=${encodeURIComponent(c.name || '')}&content=${encodeURIComponent(c.address || '')}&output=html&src=webapp.baidu.openAPIdemo`;
-          // Google Maps链接
-          // const googleUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-          
           allContent += `
-            <div style='position:relative;background:rgba(30,34,44,0.95);border-radius:8px;padding:12px 16px;margin-bottom:6px;border:1px solid #3fa7ff;transition:all 0.3s ease;'>
-              <b style='font-size:16px;color:#fff;display:block;margin-bottom:8px;font-family:"Source Han Sans","Noto Sans SC",sans-serif;'>${c.name || '未命名'}</b>
-              <div style='color:#4FC3F7;font-size:14px;display:flex;align-items:center;font-family:"Source Han Serif","Noto Serif SC",serif;margin-bottom:10px;'>
-                <svg width="16" height="20" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:4px;"><path fill="#e53935" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg>
-                <span>${c.address || '地址未知'}</span>
+            <a href='${amapUrl}' target='_blank' style='text-decoration:none;display:block;'>
+              <div style='position:relative;background:rgba(30,34,44,0.95);border-radius:8px;padding:12px 16px;margin-bottom:12px;border:1px solid #3fa7ff;transition:all 0.3s ease;cursor:pointer;'>
+                <b style='font-size:16px;color:#fff;display:block;margin-bottom:8px;font-family:"Source Han Sans","Noto Sans SC",sans-serif;'>${c.name || '未命名'}</b>
+                <div style='color:#4FC3F7;font-size:14px;display:flex;align-items:center;font-family:"Source Han Serif","Noto Serif SC",serif;'>
+                  <svg width="16" height="20" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:4px;"><path fill="#e53935" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg>
+                  <span>${c.address || '地址未知'}</span>
+                </div>
               </div>
-              <div style='display:flex;gap:8px;flex-wrap:wrap;'>
-                <a href='${amapUrl}' target='_blank' style='text-decoration:none;background:#4CAF50;color:white;padding:6px 12px;border-radius:4px;font-size:13px;'>
-                  <span>高德地图</span>
-                </a>
-                <a href='${baiduUrl}' target='_blank' style='text-decoration:none;background:#2196F3;color:white;padding:6px 12px;border-radius:4px;font-size:13px;'>
-                  <span>百度地图</span>
-                </a>
-              </div>
-            </div>
+            </a>
           `;
         });
       }
@@ -352,7 +334,7 @@ export default class World {
 
     // 设置位置
     infoPopup.style.left = '50%';
-    infoPopup.style.top = '72%';
+    infoPopup.style.top = '70%';
     infoPopup.style.transform = 'translate(-50%, -50%)';
     infoPopup.style.display = 'block';
   }

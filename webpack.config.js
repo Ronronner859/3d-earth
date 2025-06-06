@@ -11,7 +11,7 @@ const ESLintPlugin = require('eslint-webpack-plugin')
 // webpack中的所有的配置信息都应该写在module.exports中
 module.exports = {
   devServer: {
-    port: '8088'
+    port: '8082'
   },
   // 指定入口文件
   entry: './src/ts/index.ts',
@@ -20,7 +20,10 @@ module.exports = {
     // 指定打包文件的目录
     path: path.resolve(__dirname, 'dist'),
     // 打包后文件的文件
-    filename: 'bundle.js',
+    // filename: 'bundle.js',
+    filename: 'bundle.[contenthash:8].js',
+    // 配置部署路径
+    publicPath: '/map/',  // 开发环境使用根路径
     libraryTarget: 'umd',
     // 告诉webpack不使用箭头
     // 默认打包后是一个立即执行的箭头函数，在IE 11中也是无法执行的！
@@ -89,7 +92,10 @@ module.exports = {
   plugins: [
     // new CleanWebpackPlugin(),
     new HTMLWebpackPlugin({
-      template: './src/index.html',
+      // template: './src/index.html',
+      template: './public/index.html', // 你自己的 HTML 模板路径
+      inject: 'body', // 自动将 JS 注入到 <body> 标签底部
+      minify: true,
     }),
     // 把整个目录copy过去
     new CopyWebpackPlugin({

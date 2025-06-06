@@ -1,4 +1,4 @@
-import { CatmullRomCurve3, DoubleSide, Group, Mesh, MeshBasicMaterial, PlaneBufferGeometry, Texture, TubeGeometry, Vector3 } from "three";
+import { CatmullRomCurve3, DoubleSide, Group, Mesh, MeshBasicMaterial, PlaneBufferGeometry, Texture, TubeGeometry, Vector3, NormalBlending, MultiplyOperation } from "three";
 import { punctuation } from "../world/Earth";
 
 
@@ -29,9 +29,11 @@ export const createWaveMesh = (options: { radius, lon, lat, textures }) => {
   const material = new MeshBasicMaterial({
     color: 0xe99f68,
     map: texture,
-    transparent: true, //使用背景透明的png贴图，注意开启透明计算
+    transparent: true,
     opacity: 1.0,
-    depthWrite: false, //禁止写入深度缓冲区数据
+    depthWrite: false,
+    blending: NormalBlending,
+    combine: MultiplyOperation
   });
   const mesh = new Mesh(geometry, material);
   // 经纬度转球面坐标

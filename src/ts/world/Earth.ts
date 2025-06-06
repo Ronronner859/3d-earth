@@ -9,7 +9,8 @@ import html2canvas from "html2canvas";
 
 import earthVertex from '../../shaders/earth/vertex.vs';
 import earthFragment from '../../shaders/earth/fragment.fs';
-import { createAnimateLine, createLightPillar, createPointMesh, createWaveMesh, getCirclePoints, lon2xyz } from "../Utils/common";
+// createLightPillar
+import { createAnimateLine,  createPointMesh, createWaveMesh, getCirclePoints, lon2xyz } from "../Utils/common";
 import gsap from "gsap";
 import { flyArc } from "../Utils/arc";
 
@@ -70,6 +71,8 @@ export default class earth {
 
   public group: Group;
   public earthGroup: Group;
+  private isAnimating = false;
+  private hasShown = false;  // 添加新的标志位
 
   public around: BufferGeometry
   public aroundPoints: Points<BufferGeometry, PointsMaterial>;
@@ -151,6 +154,10 @@ export default class earth {
 
   async init(): Promise<void> {
     return new Promise(async (resolve) => {
+      if (this.hasShown) {
+        resolve();
+        return;
+      }
 
       this.createEarth(); // 创建地球
       this.createStars(); // 添加星星
@@ -162,6 +169,7 @@ export default class earth {
       this.createFlyLine() // 创建飞线
 
       this.show()
+      this.hasShown = true;
       resolve()
     })
   }
@@ -334,10 +342,13 @@ export default class earth {
       const radius = this.options.earth.radius;
       const lon = item.startArray.E;
       const lat = item.startArray.N;
+      // 创建点 MeshBasicMaterial是基础材质，不支持透明度，所以需要设置transparent: false,
       this.punctuationMaterial = new MeshBasicMaterial({
-        color: this.options.punctuation.circleColor,
-        map: this.options.textures.label,
+        // color: this.options.punctuation.circleColor,
+        color: 0xe99f68,
+        map: new TextureLoader().load('./images/earth/biaozhu.png'), // 使用新的贴图
         transparent: true,
+        opacity: 1,
         depthWrite: false,
       });
       // 只渲染一个点
@@ -346,49 +357,59 @@ export default class earth {
         name: item.startArray.name,
         companies: item.startArray.companies
       };
-      mesh.scale.set(2, 2, 2);
+      mesh.scale.set(3, 3, 3); // 放大点
       this.markupPoint.add(mesh);
       this.clickablePoints.push(mesh);
       // 光柱和波动光圈
-      const lightPillar = createLightPillar({
-        radius,
-        lon,
-        lat,
-        index: 0,
-        textures: this.options.textures,
-        punctuation: this.options.punctuation,
-      });
-      this.markupPoint.add(lightPillar);
+      // const lightPillar = createLightPillar({
+      //   radius,
+      //   lon,
+      //   lat,
+      //   index: 0,
+      //   textures: this.options.textures,
+      //   punctuation: this.options.punctuation,
+      // });
+      // this.markupPoint.add(lightPillar);
+      // createWaveMesh是创建波动光圈
       const waveMesh = createWaveMesh({ radius, lon, lat, textures: this.options.textures });
       this.markupPoint.add(waveMesh);
       this.waveMeshArr.push(waveMesh);
       // 添加定位marker
-      const markerTexture = new TextureLoader().load('./mark.png');
-      const markerMaterial = new SpriteMaterial({ map: markerTexture, transparent: true });
-      const markerSprite = new Sprite(markerMaterial);
-      markerSprite.scale.set(3, 2, 1);
-      markerSprite.position.copy(mesh.position.clone().multiplyScalar(1.05));
-      this.markupPoint.add(markerSprite);
+      // const markerTexture = new TextureLoader().load('./mark.png');
+      // const markerMaterial = new SpriteMaterial({ map: markerTexture, transparent: true });
+      // const markerSprite = new Sprite(markerMaterial);
+      // markerSprite.scale.set(3, 2, 1);
+      // markerSprite.position.copy(mesh.position.clone().multiplyScalar(1.05));
+      // this.markupPoint.add(markerSprite);
       this.earthGroup.add(this.markupPoint);
     }))
   }
 
   async createSpriteLabel() {
+    // 确保html2canvas容器存在
+    let shareContent = document.getElementById("html2canvas");
+    if (!shareContent) {
+      shareContent = document.createElement('div');
+      shareContent.id = "html2canvas";
+      shareContent.style.left = '-9999px';
+      document.body.appendChild(shareContent);
+    }
+
     await Promise.all(this.options.data.map(async item => {
       let cityArry = [];
       cityArry.push(item.startArray);
       cityArry = cityArry.concat(...item.endArray);
       await Promise.all(cityArry.map(async e => {
+        console.log(e)
         const p = lon2xyz(this.options.earth.radius * 1.001, e.E, e.N);
-        const div = `<div class="fire-div">${e.name}</div>`;
-        const shareContent = document.getElementById("html2canvas");
+        const div = `<div class="" style="width:600px;height:300px;"><img src="./images/earth/company.png" style="width:100%;height:100%;object-fit:contain;display:block;background:transparent;"></div>`;
         shareContent.innerHTML = div;
         const opts = {
           backgroundColor: null, // 背景透明
-          scale: 6,
+          scale: 2,
           dpi: window.devicePixelRatio,
         };
-        const canvas = await html2canvas(document.getElementById("html2canvas"), opts)
+        const canvas = await html2canvas(shareContent, opts)
         const dataURL = canvas.toDataURL("image/png");
         const map = new TextureLoader().load(dataURL);
         const material = new SpriteMaterial({
@@ -396,9 +417,9 @@ export default class earth {
           transparent: true,
         });
         const sprite = new Sprite(material);
-        const len = 5 + (e.name.length - 2) * 2;
-        sprite.scale.set(len, 3, 1);
-        sprite.position.set(p.x * 1.1, p.y * 1.1, p.z * 1.1);
+        // 调整图片大小
+        sprite.scale.set(12, 5, 1);
+        sprite.position.set(p.x * 1.1, p.y * 1.3, p.z * 1.2);
         this.earth.add(sprite);
       }))
     }))
@@ -522,13 +543,21 @@ export default class earth {
   }
 
   show() {
-    gsap.to(this.group.scale, {
-      x: 1,
-      y: 1,
-      z: 1,
-      duration: 2,
-      ease: "Quadratic",
-    })
+    // 确保动画只执行一次，并且当前没有正在执行的动画
+    if (!this.hasShown && !this.isAnimating && this.group.scale.x === 0) {
+      this.isAnimating = true;
+      gsap.to(this.group.scale, {
+        x: 1,
+        y: 1,
+        z: 1,
+        duration: 2,
+        ease: "Quadratic",
+        onComplete: () => {
+          this.isAnimating = false;
+          this.hasShown = true;
+        }
+      })
+    }
   }
 
   render() {
